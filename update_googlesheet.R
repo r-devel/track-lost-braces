@@ -34,8 +34,9 @@ from_CRAN <- Rd_NOTE_lb_vc |>
   select(Package, Version, Maintainer, Output, URL, BugReports)
 
 # read in sheet
+sheet_url <- "https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=1451772479#gid=1451772479"
 current_sheet <- read_sheet(
-  "https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=1451772479#gid=1451772479",
+  sheet_url,
   col_types = "cclcTccccccii"
 )
 
@@ -70,13 +71,11 @@ updated_rows <- all_rows |>
   rows_update(pdb_version, by = "Package") |>
   mutate(Output = if_else(has_lb_NOTE, Output, NA)) |>
   rows_update(Rd_NOTE_lb_vc_output, by = "Package") |>
-  rows_update(downloads, by = "Package")
+  rows_update(downloads, by = "Package") |>
+  mutate(Output = stringr::str_trunc(Output, 49000))
 
-# TODO: update programmatically:
-# PR_status
-# PR_link
-# We get PR_info from track_PRs.R
 
+# Update PR info
 PR_info_new <- PR_info |>
   mutate(
     PR_status = case_when(
@@ -117,12 +116,34 @@ updated_rows_pr <- updated_rows |>
       coalesce(PR_status_new, PR_status)
     )
   ) |>
-  select(-PR_status_new)
+  select(-PR_status_new) |>
+  arrange(desc(downloads_last_month)) |>
+  mutate(URL = gs4_formula(sprintf('=HYPERLINK("%s","%s")', URL, URL))) |>
+  mutate(
+    BugReports = gs4_formula(sprintf(
+      '=HYPERLINK("%s","%s")',
+      BugReports,
+      BugReports
+    ))
+  ) |>
+  mutate(
+    PR_link = gs4_formula(sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link))
+  )
 
-# TODO: write back to GoogleSheets
+
+# df$link <- gs4_formula(
+#   ifelse(
+#     is.na(df$url),
+#     "",  # blank cell for NA
+#     sprintf('=HYPERLINK("%s","%s")', df$url, df$url)
+#   )
+# )
+
+# TODO: PR_created_date not coming through
+write_sheet(updated_rows_pr, ss = sheet_url, sheet = "Latest")
 
 # Next packages to submit manual PRs to:
-updated_rows |>
+updated_rows_pr |>
   arrange(desc(downloads_last_month)) |>
   filter(is.na(PR_status)) |>
   head() |>
