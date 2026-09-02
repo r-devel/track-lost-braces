@@ -75,6 +75,49 @@ updated_rows <- all_rows |>
 # TODO: update programmatically:
 # PR_status
 # PR_link
+# We get PR_info from track_PRs.R
+
+PR_info_new <- PR_info |>
+  mutate(
+    PR_status = case_when(
+      state == "open" ~ "PR opened",
+      state == "closed" &
+        is.na(merged_at) ~ "Fixed by maintainer on repo OR closed no fix",
+      state == "closed" & !is.na(merged_at) ~ "PR merged"
+    )
+  ) |>
+  mutate(
+    PR_created_date = as.POSIXct(
+      PR_created_date,
+      format = "%Y-%m-%dT%H:%M:%SZ",
+      tz = "UTC"
+    )
+  ) |>
+  select(-state, -merged_at)
+
+# Packages with a frozen/terminal status keep it regardless of new PR data;
+# otherwise use the freshly computed status if we have one, else keep the
+# existing status (a package can be absent from PR_info_new simply because
+# it has no PR referenced in the r-dev-day tracking issue this run).
+updated_rows_pr <- updated_rows |>
+  left_join(
+    PR_info_new |> select(Package, PR_status_new = PR_status),
+    by = "Package"
+  ) |>
+  mutate(
+    PR_status = if_else(
+      PR_status %in%
+        c(
+          "Repository archived",
+          "Repository unsupported",
+          "Fixed by maintainer on repo",
+          "PR closed (no fix)"
+        ),
+      PR_status,
+      coalesce(PR_status_new, PR_status)
+    )
+  ) |>
+  select(-PR_status_new)
 
 # TODO: write back to GoogleSheets
 

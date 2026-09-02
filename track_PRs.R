@@ -97,7 +97,7 @@ get_pr_info <- function(i) {
   out_list$PR_link <- pr_df$URL[i]
   out_list$Contributor <- res$user$login # The R contributor who raised the PR
   out_list$state <- res$state
-  out_list$created_at <- res$created_at
+  out_list$PR_created_date <- res$created_at
   out_list$merged_at <- (if (is.null(res$merged_at)) {
     NA
   } else {
@@ -110,5 +110,3 @@ get_pr_info <- function(i) {
 # Get PR details for each PR
 PR_info <- lapply(seq_len(nrow(pr_df)), get_pr_info) |>
   bind_rows()
-
-PR_info
