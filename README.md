@@ -14,10 +14,11 @@ The [tracking spreadsheet](https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_u
   - Find the GitHub repo: this should be either in the URL or BugReport column
 - Fork the package repo, make the fix and submit a PR to the package. In the PR, link to <https://github.com/r-devel/r-dev-day/issues/110>. Linking to this issue is **crucial** to ensure that the spreadsheet is properly updated (as well as to give context to the package owner)
 - If you come across a package in the spreadsheet where the repository has been archived on GitHub (or equivalent), please make a comment to report this in <https://github.com/r-devel/r-dev-day/issues/110> and tag @EllaKaye.
+- If the PR_status column is not colour-coded by status, this can be appied by going to the `Data Validation` tab, copying Column A, then selecting the PR_status column in the `Latest` tab, then right-clicking in the column, selecting `Paste special` -> `Data validation only`.
 
 Note that the tracking spreadsheet is *read only*. Your contributions are programmatically added to the spreadsheet providing the PR is linked to as described avove.
 
-We also do not expect folks to run any of the R scripts themselves, nor manually trigger the GitHub Action. 
+We also do not expect folks to run any of the R scripts themselves (except possibly [analyse_track_lost_braces.R](analyse_track_lost_braces.R) if they want to analyse this data in R), nor manually trigger the GitHub Action. 
 The contributor workflow only involves the tracking spreadsheet and <https://github.com/r-devel/r-dev-day/issues/110>.
 
 ## Repo setup
