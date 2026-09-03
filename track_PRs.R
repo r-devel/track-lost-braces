@@ -5,7 +5,6 @@
 # https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=500184850#gid=500184850
 
 library(httr2)
-library(jsonlite)
 library(gitcreds)
 library(dplyr)
 library(stringr)
