@@ -3,6 +3,7 @@ library(tools)
 library(dplyr)
 library(stringr)
 library(cranlogs)
+library(data.table)
 
 source("track_PRs.R")
 
@@ -72,7 +73,8 @@ updated_rows <- all_rows |>
   mutate(Output = if_else(has_lb_NOTE, Output, NA)) |>
   rows_update(Rd_NOTE_lb_vc_output, by = "Package") |>
   rows_update(downloads, by = "Package") |>
-  mutate(Output = stringr::str_trunc(Output, 49000))
+  mutate(Output = stringr::str_trunc(Output, 49000)) |>
+  select(-PR_created_date)
 
 
 # Update PR info
@@ -100,7 +102,7 @@ PR_info_new <- PR_info |>
 # it has no PR referenced in the r-dev-day tracking issue this run).
 updated_rows_pr <- updated_rows |>
   left_join(
-    PR_info_new |> select(Package, PR_status_new = PR_status),
+    PR_info_new |> select(Package, PR_created_date, PR_status_new = PR_status),
     by = "Package"
   ) |>
   mutate(
@@ -118,26 +120,28 @@ updated_rows_pr <- updated_rows |>
   ) |>
   select(-PR_status_new) |>
   arrange(desc(downloads_last_month)) |>
-  mutate(URL = gs4_formula(sprintf('=HYPERLINK("%s","%s")', URL, URL))) |>
   mutate(
-    BugReports = gs4_formula(sprintf(
-      '=HYPERLINK("%s","%s")',
-      BugReports,
-      BugReports
+    URL = gs4_formula(ifelse(
+      URL == "NA",
+      NA_character_,
+      sprintf('=HYPERLINK("%s","%s")', URL, URL)
     ))
   ) |>
   mutate(
-    PR_link = gs4_formula(sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link))
-  )
-
-
-# df$link <- gs4_formula(
-#   ifelse(
-#     is.na(df$url),
-#     "",  # blank cell for NA
-#     sprintf('=HYPERLINK("%s","%s")', df$url, df$url)
-#   )
-# )
+    BugReports = gs4_formula(ifelse(
+      BugReports == "NA",
+      NA_character_,
+      sprintf('=HYPERLINK("%s","%s")', BugReports, BugReports)
+    ))
+  ) |>
+  mutate(
+    PR_link = gs4_formula(ifelse(
+      PR_link == "NA",
+      NA_character_,
+      sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link)
+    ))
+  ) |>
+  select(Contributor:PR_link, PR_created_date, Package:downloads_last_month)
 
 # TODO: PR_created_date not coming through
 write_sheet(updated_rows_pr, ss = sheet_url, sheet = "Latest")
