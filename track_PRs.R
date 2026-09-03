@@ -1,8 +1,8 @@
 # NOTES
 # Script takes ~1 minute to run on an M5 MackBook Pro
-# Script requires access to the rowforwards Google account for authentication
-# See https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=500184850#gid=500184850
-# for latest tracking data without needing access to the account
+# Script requires a Google account for authentication
+# Tracking spreadsheet is
+# https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=500184850#gid=500184850
 
 library(httr2)
 library(jsonlite)

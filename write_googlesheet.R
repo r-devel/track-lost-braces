@@ -2,6 +2,8 @@
 # Script takes ~1 minute to run on an M5 MackBook Pro
 # Script requires access to the rowforwards Google account for authentication
 # Any "PROBLEMS" showing in Positron resolve after source("track_lost_braces.R") is run
+# Tracking spreadsheet is
+# https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=500184850#gid=500184850
 
 source("track_lost_braces.R")
 
