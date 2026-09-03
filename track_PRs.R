@@ -1,8 +1,16 @@
+# NOTES
+# Script takes ~1 minute to run on an M5 MackBook Pro
+# Script requires access to the rowforwards Google account for authentication
+# See https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=500184850#gid=500184850
+# for latest tracking data without needing access to the account
+
 library(httr2)
 library(jsonlite)
 library(gitcreds)
 library(dplyr)
 library(stringr)
+
+source("read_googlesheet.R")
 
 # Get GitHub token stored with gitcreds_set()
 cred <- gitcreds::gitcreds_get()
@@ -63,7 +71,13 @@ pr2 <- subset(
   res[[1]]$repository$issue$timelineItems$nodes$source,
   `__typename` == "PullRequest"
 )$url
-prs <- unique(sort(c(pr1, pr2)))
+
+# Get PRs from the GoogleSheet
+pr3 <- current_sheet$PR_link[
+  !is.na(current_sheet$PR_link) & grepl("pull", current_sheet$PR_link)
+]
+
+prs <- unique(sort(c(pr1, pr2, pr3)))
 
 # Get GitHub repos and usernames to query
 package_urls <- str_remove(prs, "https://github.com") |> str_split("/")

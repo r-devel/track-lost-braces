@@ -1,11 +1,14 @@
-library(googlesheets4)
-library(tools)
-library(dplyr)
-library(stringr)
-library(cranlogs)
-library(data.table)
+# NOTES
+# Script takes ~1 minute to run on an M5 MackBook Pro
+# Any "PROBLEMS" showing in Positron resolve after source("track_PRs.R") is run
+# Script requires access to the rowforwards Google account for authentication
+# See https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=500184850#gid=500184850
+# for latest tracking data without needing access to the account
 
-source("track_PRs.R")
+source("track_PRs.R") # this also calls read_googlesheet.R, gives us PR_info
+
+library(tools)
+library(cranlogs)
 
 # NOTE: lb is shorthand for Lost Braces, a type of documentation NOTE
 # NOTE: vc is shorthand Version Controlled (in GitHub/GitLab/BitBucket)
@@ -34,21 +37,15 @@ Rd_NOTE_lb_vc <- Rd_NOTE_lb[
 from_CRAN <- Rd_NOTE_lb_vc |>
   select(Package, Version, Maintainer, Output, URL, BugReports)
 
-# read in sheet
-sheet_url <- "https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=1451772479#gid=1451772479"
-current_sheet <- read_sheet(
-  sheet_url,
-  col_types = "cclcTccccccii"
-)
-
 # Find packages which still have this NOTE *or* have a PR_status
 # (keep if PR_status as record of R contributor effort)
+# NOTE: current_sheet is defined in read_googlesheet.R
 rows_to_keep <- current_sheet |>
   filter((Package %in% from_CRAN$Package) | !is.na(PR_status))
 
 # CRAN packages that have lb NOTE since sheet last updated
 add_to_sheet <- from_CRAN |>
-  filter(Package %notin% current_sheet$Package)
+  filter(!(Package %in% current_sheet$Package))
 
 all_rows <- bind_rows(rows_to_keep, add_to_sheet)
 
@@ -73,9 +70,7 @@ updated_rows <- all_rows |>
   mutate(Output = if_else(has_lb_NOTE, Output, NA)) |>
   rows_update(Rd_NOTE_lb_vc_output, by = "Package") |>
   rows_update(downloads, by = "Package") |>
-  mutate(Output = stringr::str_trunc(Output, 49000)) |>
   select(-PR_created_date)
-
 
 # Update PR info
 PR_info_new <- PR_info |>
@@ -94,15 +89,20 @@ PR_info_new <- PR_info |>
       tz = "UTC"
     )
   ) |>
-  select(-state, -merged_at)
+  select(-state, -merged_at) |>
+  rename(
+    PR_status_new = PR_status,
+    Contributor_new = Contributor,
+    PR_link_new = PR_link
+  )
 
 # Packages with a frozen/terminal status keep it regardless of new PR data;
 # otherwise use the freshly computed status if we have one, else keep the
 # existing status (a package can be absent from PR_info_new simply because
 # it has no PR referenced in the r-dev-day tracking issue this run).
-updated_rows_pr <- updated_rows |>
+track_lost_braces <- updated_rows |>
   left_join(
-    PR_info_new |> select(Package, PR_created_date, PR_status_new = PR_status),
+    PR_info_new,
     by = "Package"
   ) |>
   mutate(
@@ -118,49 +118,8 @@ updated_rows_pr <- updated_rows |>
       coalesce(PR_status_new, PR_status)
     )
   ) |>
-  select(-PR_status_new) |>
+  mutate(PR_link = coalesce(PR_link_new, PR_link)) |>
+  mutate(Contributor = coalesce(Contributor, Contributor_new)) |>
+  select(-PR_status_new, -Contributor_new, -PR_link_new) |>
   arrange(desc(downloads_last_month)) |>
-  mutate(
-    URL = gs4_formula(ifelse(
-      URL == "NA",
-      NA_character_,
-      sprintf('=HYPERLINK("%s","%s")', URL, URL)
-    ))
-  ) |>
-  mutate(
-    BugReports = gs4_formula(ifelse(
-      BugReports == "NA",
-      NA_character_,
-      sprintf('=HYPERLINK("%s","%s")', BugReports, BugReports)
-    ))
-  ) |>
-  mutate(
-    PR_link = gs4_formula(ifelse(
-      PR_link == "NA",
-      NA_character_,
-      sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link)
-    ))
-  ) |>
   select(Contributor:PR_link, PR_created_date, Package:downloads_last_month)
-
-# TODO: PR_created_date not coming through
-write_sheet(updated_rows_pr, ss = sheet_url, sheet = "Latest")
-
-# Next packages to submit manual PRs to:
-updated_rows_pr |>
-  arrange(desc(downloads_last_month)) |>
-  filter(is.na(PR_status)) |>
-  head() |>
-  select(Package, BugReports)
-
-# For CRAN team: packages that need to make a release or merge a PR
-updated_rows |>
-  filter(has_lb_NOTE & !is.na(PR_status))
-
-# For R Contributors: keep track of successes!
-updated_rows |>
-  filter(!has_lb_NOTE & !is.na(PR_status))
-
-updated_rows |>
-  filter(Package == "survMisc") |>
-  View()
