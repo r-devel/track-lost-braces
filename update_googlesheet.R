@@ -3,6 +3,7 @@ library(tools)
 library(dplyr)
 library(stringr)
 library(cranlogs)
+library(data.table)
 
 source("track_PRs.R")
 
@@ -118,26 +119,27 @@ updated_rows_pr <- updated_rows |>
   ) |>
   select(-PR_status_new) |>
   arrange(desc(downloads_last_month)) |>
-  mutate(URL = gs4_formula(sprintf('=HYPERLINK("%s","%s")', URL, URL))) |>
   mutate(
-    BugReports = gs4_formula(sprintf(
-      '=HYPERLINK("%s","%s")',
-      BugReports,
-      BugReports
+    URL = gs4_formula(ifelse(
+      URL == "NA",
+      "",
+      sprintf('=HYPERLINK("%s","%s")', URL, URL)
     ))
   ) |>
   mutate(
-    PR_link = gs4_formula(sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link))
+    BugReports = gs4_formula(ifelse(
+      BugReports == "NA",
+      "",
+      sprintf('=HYPERLINK("%s","%s")', BugReports, BugReports)
+    ))
+  ) |>
+  mutate(
+    PR_link = gs4_formula(ifelse(
+      PR_link == "NA",
+      "",
+      sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link)
+    ))
   )
-
-
-# df$link <- gs4_formula(
-#   ifelse(
-#     is.na(df$url),
-#     "",  # blank cell for NA
-#     sprintf('=HYPERLINK("%s","%s")', df$url, df$url)
-#   )
-# )
 
 # TODO: PR_created_date not coming through
 write_sheet(updated_rows_pr, ss = sheet_url, sheet = "Latest")
