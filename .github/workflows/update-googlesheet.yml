@@ -1,0 +1,36 @@
+name: Update GoogleSheet
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  update-sheet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            googlesheets4
+            dplyr
+            stringr
+            httr2
+            gitcreds
+            tools
+            cranlogs
+
+      - name: Write service account key
+        run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}' > service_account.json
+
+      - name: Run script
+        env:
+          GOOGLE_SERVICE_ACCOUNT_PATH: service_account.json
+        run: Rscript write_googlesheet.R
