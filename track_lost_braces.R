@@ -3,7 +3,7 @@
 # Any "PROBLEMS" showing in Positron resolve after source("track_PRs.R") is run
 # Script requires a Google account for authentication
 # Tracking spreadsheet is
-# https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA/edit?gid=500184850#gid=500184850
+# https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA
 
 source("track_PRs.R") # this also calls read_googlesheet.R, gives us PR_info
 
