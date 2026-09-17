@@ -31,5 +31,11 @@ updated_sheet <- track_lost_braces |>
     ))
   )
 
+
 # ss defined in read_googlesheet.R
-write_sheet(updated_sheet, ss, sheet = "Latest")
+# first sheet is "Latest (YYYY-MM-DD)" which is when previously updated
+new_name <- paste0("Latest (", Sys.Date(), ")")
+sheet_rename(ss, sheet = 1, new_name)
+
+# defaults renaming to the first visible sheet
+write_sheet(updated_sheet, ss, new_name)
