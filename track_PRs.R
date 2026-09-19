@@ -11,12 +11,15 @@ library(stringr)
 
 source("read_googlesheet.R")
 
-# Get GitHub token stored with gitcreds_set()
-cred <- gitcreds::gitcreds_get()
-if (is.null(cred$password)) {
-  stop("No GitHub PAT found in git credentials!")
+# Prefer token from env (for CI), fallback to gitcreds for local runs
+token <- Sys.getenv("GITHUB_TOKEN")
+if (token == "") {
+  cred <- gitcreds::gitcreds_get()
+  if (is.null(cred$password) || cred$password == "") {
+    stop("No GitHub token found in GITHUB_TOKEN or git credentials!")
+  }
+  token <- cred$password
 }
-token <- cred$password
 
 # Define owner, repo, issue number
 owner <- "r-devel"

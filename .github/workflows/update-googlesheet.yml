@@ -33,4 +33,5 @@ jobs:
       - name: Run script
         env:
           GOOGLE_SERVICE_ACCOUNT_PATH: service_account.json
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: Rscript write_googlesheet.R
