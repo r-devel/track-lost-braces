@@ -28,3 +28,8 @@ track_lost_braces |>
 # For R Contributors: keep track of successes!
 track_lost_braces |>
   filter(!has_lb_NOTE & !is.na(PR_status))
+
+# Check source repositories for fixes not yet released to CRAN (Issue #1)
+# source("check_repo_fixes.R")
+# repo_fixes <- find_repo_fixed_packages(track_lost_braces)
+# repo_fixes |> filter(Snippets_removed)
