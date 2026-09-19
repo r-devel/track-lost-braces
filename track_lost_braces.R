@@ -65,9 +65,9 @@ downloads <- cran_downloads(all_rows$Package, "last-month") |>
 # Update rows for sheet
 updated_rows <- all_rows |>
   mutate(has_lb_NOTE = Package %in% from_CRAN$Package) |>
-  mutate(Version = if_else(Package %in% pdb$Package, Version, NA)) |>
+  mutate(Version = if_else(Package %in% pdb$Package, Version, NA_character_)) |>
   rows_update(pdb_version, by = "Package") |>
-  mutate(Output = if_else(has_lb_NOTE, Output, NA)) |>
+  mutate(Output = if_else(has_lb_NOTE, Output, NA_character_)) |>
   rows_update(Rd_NOTE_lb_vc_output, by = "Package") |>
   rows_update(downloads, by = "Package") |>
   select(-PR_created_date)
