@@ -6,6 +6,7 @@
 # https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA
 
 source("track_PRs.R") # this also calls read_googlesheet.R, gives us PR_info
+source("check_repo_fixes.R") # gives us find_repo_fixed_packages
 
 library(tools)
 library(cranlogs)
@@ -123,3 +124,27 @@ track_lost_braces <- updated_rows |>
   select(-PR_status_new, -Contributor_new, -PR_link_new) |>
   arrange(desc(downloads_last_month)) |>
   select(Contributor:PR_link, PR_created_date, Package:downloads_last_month)
+
+# Check candidate packages where PR_status is NA to see if the maintainer
+# has already fixed the lost braces in the repo's default branch (addresses Issue #1).
+repo_fixes <- find_repo_fixed_packages(track_lost_braces, auth_token = token)
+
+if (nrow(repo_fixes) > 0) {
+  fixed_pkgs <- repo_fixes |>
+    filter(Snippets_checked > 0) |>
+    summarise(
+      all_fixed = all(Snippets_removed),
+      .by = Package
+    ) |>
+    filter(all_fixed) |>
+    pull(Package)
+
+  track_lost_braces <- track_lost_braces |>
+    mutate(
+      PR_status = if_else(
+        is.na(PR_status) & Package %in% fixed_pkgs,
+        "Fixed by maintainer on repo",
+        PR_status
+      )
+    )
+}

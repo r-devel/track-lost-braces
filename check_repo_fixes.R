@@ -1,26 +1,24 @@
 # check_repo_fixes.R
-# Check repositories with Lost braces issues that have been fixed
+# Functions to check repositories with Lost braces issues that have been fixed
 # in the source repo, but not yet released to CRAN (addresses Issue #1).
+# Sourced and called by track_lost_braces.R.
 
-library(httr2)
-library(dplyr)
-library(stringr)
-
-# Source existing sheet if current_sheet is not already in environment
-if (!exists("current_sheet")) {
-  source("read_googlesheet.R")
-}
-
-# Prefer token from env (for CI), fallback to gitcreds for local runs
-token <- Sys.getenv("GITHUB_TOKEN")
-if (token == "") {
-  cred <- gitcreds::gitcreds_get()
-  if (!is.null(cred$password) && cred$password != "") {
-    token <- cred$password
-  }
-}
-
-# Helper: Extract GitHub repository "owner/repo" from URL or BugReports fields
+# Helper: Extract GitHub repository "owner/repo" from URL or BugReports fields.
+#
+# Regex Explanation:
+# "https?://github\\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)"
+# - https?://      : Matches the URL scheme ("http://" or "https://").
+# - github\\.com/  : Matches the literal domain "github.com/".
+# - ([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+) : Captures the "owner/repo" path.
+#     * [A-Za-z0-9_.-]+ matches valid GitHub owner and repository characters
+#       (alphanumeric characters, underscores, dots, and hyphens).
+#     * The slash "/" separates the repository owner and repository name.
+#
+# Follow-up sanitisation:
+# - str_remove(repo_path, "\\.git$") strips any trailing ".git" suffix.
+# - If the path segment after owner is a sub-directory or action such as
+#   "issues", "pull", "pulls", "blob", or "tree", it is ignored so that
+#   only genuine repository roots are returned.
 extract_github_repo <- function(url_text, bugreports_text) {
   candidates <- c(bugreports_text, url_text)
   candidates <- candidates[!is.na(candidates) & candidates != "" & candidates != "NA"]
@@ -39,7 +37,17 @@ extract_github_repo <- function(url_text, bugreports_text) {
   NA_character_
 }
 
-# Helper: Parse target Rd filename(s) from CRAN check output
+# Helper: Parse target Rd filename(s) from CRAN check output.
+#
+# Regex Explanation:
+# "checkRd:\\s*(?:\\(-?\\d+\\)\\s*)?([A-Za-z0-9._-]+\\.Rd)"
+# - checkRd:               : Matches the literal "checkRd:" prefix emitted by CRAN check logs.
+# - \\s*                   : Matches optional whitespace after the colon.
+# - (?:\\(-?\\d+\\)\\s*)?  : Non-capturing group matching an optional severity/offset code
+#                            enclosed in parentheses, such as "(-1)" or "(0)", followed by
+#                            optional whitespace.
+# - ([A-Za-z0-9._-]+\\.Rd) : Capturing group for the Rd filename ending in ".Rd"
+#                            (e.g., "my_function.Rd" or "data-set.Rd").
 parse_rd_files <- function(output_text) {
   if (is.na(output_text) || output_text == "") {
     return(character(0))
@@ -51,7 +59,17 @@ parse_rd_files <- function(output_text) {
   character(0)
 }
 
-# Helper: Extract offending snippet lines from CRAN note output
+# Helper: Extract offending snippet lines from CRAN note output.
+#
+# Regex Explanation:
+# "^\\s*\\d+\\s*\\|\\s*(.+)$"
+# CRAN check logs print the source code line containing the lost brace with line numbering:
+# "   21 | Reads a \url{https://...}{Variant Call Format (VCF)} file into a BED object,"
+# - ^\\s*   : Anchors to start of line, matching optional leading whitespace.
+# - \\d+    : Matches one or more digits representing the source line number (e.g., "21").
+# - \\s*\\| : Matches optional whitespace followed by the literal pipe "|" separator.
+# - \\s*    : Matches optional whitespace after the pipe.
+# - (.+)$   : Captures the offending code snippet text up to the end of the line.
 parse_snippet_lines <- function(output_text) {
   if (is.na(output_text) || output_text == "") {
     return(character(0))
@@ -59,7 +77,6 @@ parse_snippet_lines <- function(output_text) {
   lines <- str_split(output_text, "\n")[[1]]
   snippet_lines <- character(0)
   for (line in lines) {
-    # CRAN output format: "   21 | Reads a \url..."
     m <- str_match(line, "^\\s*\\d+\\s*\\|\\s*(.+)$")
     if (!is.na(m[1, 2])) {
       snippet_lines <- c(snippet_lines, str_trim(m[1, 2]))
@@ -69,7 +86,7 @@ parse_snippet_lines <- function(output_text) {
 }
 
 # Check an individual package repository for fixes in Rd files
-check_package_repo_fix <- function(pkg_name, repo, rd_files, snippets, auth_token) {
+check_package_repo_fix <- function(pkg_name, repo, rd_files, snippets, auth_token = "") {
   if (is.na(repo) || length(rd_files) == 0) {
     return(NULL)
   }
@@ -80,7 +97,7 @@ check_package_repo_fix <- function(pkg_name, repo, rd_files, snippets, auth_toke
     file_url <- sprintf("https://api.github.com/repos/%s/contents/man/%s", repo, rd)
     req <- request(file_url)
 
-    if (auth_token != "") {
+    if (!is.null(auth_token) && auth_token != "") {
       req <- req |> req_headers("Authorization" = paste("Bearer", auth_token))
     }
     req <- req |> req_headers("Accept" = "application/vnd.github.v3.raw")
@@ -100,37 +117,12 @@ check_package_repo_fix <- function(pkg_name, repo, rd_files, snippets, auth_toke
     snippets_present <- vapply(snippets, function(s) str_detect(content, fixed(s)), logical(1))
     all_snippets_removed <- length(snippets) > 0 && !any(snippets_present)
 
-    # Query latest commit for the file to get additional context
-    commits_url <- sprintf("https://api.github.com/repos/%s/commits?path=man/%s&page=1&per_page=1", repo, rd)
-    c_req <- request(commits_url)
-    if (auth_token != "") {
-      c_req <- c_req |> req_headers("Authorization" = paste("Bearer", auth_token))
-    }
-
-    c_resp <- tryCatch(
-      req_perform(c_req),
-      error = function(e) NULL
-    )
-
-    commit_date <- NA_character_
-    commit_msg <- NA_character_
-
-    if (!is.null(c_resp) && resp_status(c_resp) == 200) {
-      commit_data <- resp_body_json(c_resp, simplifyVector = TRUE)
-      if (length(commit_data) > 0) {
-        commit_date <- commit_data$commit$committer$date[1]
-        commit_msg <- str_split(commit_data$commit$message[1], "\n")[[1]][1]
-      }
-    }
-
     results[[length(results) + 1]] <- tibble(
       Package = pkg_name,
       Repository = repo,
       Rd_file = rd,
       Snippets_checked = length(snippets),
-      Snippets_removed = all_snippets_removed,
-      Latest_commit_date = commit_date,
-      Latest_commit_message = commit_msg
+      Snippets_removed = all_snippets_removed
     )
   }
 
@@ -138,11 +130,11 @@ check_package_repo_fix <- function(pkg_name, repo, rd_files, snippets, auth_toke
 }
 
 # Main function to check candidate packages
-find_repo_fixed_packages <- function(sheet = current_sheet, auth_token = token, limit = NULL) {
+find_repo_fixed_packages <- function(df, auth_token = if (exists("token")) token else Sys.getenv("GITHUB_TOKEN"), limit = NULL) {
   # Candidate packages: still flagged with NOTE on CRAN, no PR_status yet
-  candidates <- sheet |>
+  candidates <- df |>
     filter(has_lb_NOTE) |>
-    filter(is.na(PR_status) | PR_status == "" | PR_status == "Fixed by maintainer on repo")
+    filter(is.na(PR_status) | PR_status == "")
 
   if (!is.null(limit) && limit > 0) {
     candidates <- head(candidates, limit)
