@@ -11,21 +11,21 @@ updated_sheet <- track_lost_braces |>
   mutate(Output = stringr::str_trunc(Output, 49000)) |>
   mutate(
     URL = gs4_formula(ifelse(
-      URL == "NA",
+      is.na(URL) | URL == "NA" | URL == "",
       NA_character_,
       sprintf('=HYPERLINK("%s","%s")', URL, URL)
     ))
   ) |>
   mutate(
     BugReports = gs4_formula(ifelse(
-      BugReports == "NA",
+      is.na(BugReports) | BugReports == "NA" | BugReports == "",
       NA_character_,
       sprintf('=HYPERLINK("%s","%s")', BugReports, BugReports)
     ))
   ) |>
   mutate(
     PR_link = gs4_formula(ifelse(
-      PR_link == "NA",
+      is.na(PR_link) | PR_link == "NA" | PR_link == "",
       NA_character_,
       sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link)
     ))
