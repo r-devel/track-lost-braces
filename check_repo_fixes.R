@@ -37,6 +37,36 @@ extract_github_repo <- function(url_text, bugreports_text) {
   NA_character_
 }
 
+# Helper: Restrict CRAN check Output text to just the "Lost braces" issues.
+#
+# A package's Rd-files NOTE Output can bundle several distinct checkRd
+# issue types together (e.g. "Lost braces" alongside "Escaped LaTeX
+# specials"), and upstream filtering only guarantees that "Lost braces"
+# appears *somewhere* in the blob, not that every line in it is about lost
+# braces. Splitting into per-"checkRd:"-header blocks and keeping only the
+# ones whose header mentions "Lost braces" stops unrelated Rd files and
+# snippets from being pulled into the repo-fix check below.
+filter_lost_braces_output <- function(output_text) {
+  if (is.na(output_text) || output_text == "") {
+    return(output_text)
+  }
+  lines <- str_split(output_text, "\n")[[1]]
+  header_idx <- which(str_detect(lines, "^\\s*checkRd:"))
+  if (length(header_idx) == 0) {
+    return(output_text)
+  }
+  block_start <- header_idx
+  block_end <- c(header_idx[-1] - 1, length(lines))
+  keep <- str_detect(lines[header_idx], "Lost braces")
+  kept_lines <- unlist(mapply(
+    function(start, end) lines[start:end],
+    block_start[keep],
+    block_end[keep],
+    SIMPLIFY = FALSE
+  ))
+  paste(kept_lines, collapse = "\n")
+}
+
 # Helper: Parse target Rd filename(s) from CRAN check output.
 #
 # Regex Explanation:
@@ -150,8 +180,9 @@ find_repo_fixed_packages <- function(df, auth_token = if (exists("token")) token
   for (i in seq_len(nrow(candidates))) {
     row <- candidates[i, ]
     repo <- extract_github_repo(row$URL, row$BugReports)
-    rd_files <- parse_rd_files(row$Output)
-    snippets <- parse_snippet_lines(row$Output)
+    lb_output <- filter_lost_braces_output(row$Output)
+    rd_files <- parse_rd_files(lb_output)
+    snippets <- parse_snippet_lines(lb_output)
 
     res <- check_package_repo_fix(
       pkg_name = row$Package,
