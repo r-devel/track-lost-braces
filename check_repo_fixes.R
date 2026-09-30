@@ -131,10 +131,15 @@ check_package_repo_fix <- function(pkg_name, repo, rd_files, snippets, auth_toke
 
 # Main function to check candidate packages
 find_repo_fixed_packages <- function(df, auth_token = if (exists("token")) token else Sys.getenv("GITHUB_TOKEN"), limit = NULL) {
-  # Candidate packages: still flagged with NOTE on CRAN, no PR_status yet
+  # Candidate packages: still flagged with NOTE on CRAN, and either no
+  # PR_status yet, or an ambiguous status from a closed-but-unmerged PR
+  # that this check can help disambiguate.
   candidates <- df |>
     filter(has_lb_NOTE) |>
-    filter(is.na(PR_status) | PR_status == "")
+    filter(
+      is.na(PR_status) | PR_status == "" |
+        PR_status == "Fixed by maintainer on repo OR closed no fix"
+    )
 
   if (!is.null(limit) && limit > 0) {
     candidates <- head(candidates, limit)

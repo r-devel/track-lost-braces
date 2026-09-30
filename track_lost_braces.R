@@ -125,8 +125,9 @@ track_lost_braces <- updated_rows |>
   arrange(desc(downloads_last_month)) |>
   select(Contributor:PR_link, PR_created_date, Package:downloads_last_month)
 
-# Check candidate packages where PR_status is NA to see if the maintainer
-# has already fixed the lost braces in the repo's default branch (addresses Issue #1).
+# Check candidate packages with no PR_status, or an ambiguous status from a
+# closed-but-unmerged PR, to see if the maintainer has already fixed the lost
+# braces in the repo's default branch (addresses Issue #1).
 repo_fixes <- find_repo_fixed_packages(track_lost_braces, auth_token = token)
 
 if (nrow(repo_fixes) > 0) {
@@ -142,7 +143,10 @@ if (nrow(repo_fixes) > 0) {
   track_lost_braces <- track_lost_braces |>
     mutate(
       PR_status = if_else(
-        is.na(PR_status) & Package %in% fixed_pkgs,
+        (is.na(PR_status) |
+          PR_status == "" |
+          PR_status == "Fixed by maintainer on repo OR closed no fix") &
+          Package %in% fixed_pkgs,
         "Fixed by maintainer on repo",
         PR_status
       )
