@@ -2,7 +2,7 @@ name: Update GoogleSheet
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 06:00 UTC daily
+    - cron: '0 6 * * 0'   # 06:00 UTC Sundays
   workflow_dispatch:
 
 jobs:

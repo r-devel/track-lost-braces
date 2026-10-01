@@ -1,7 +1,7 @@
 # NOTES
-# Script takes ~1 minute to run on an M5 MackBook Pro
+# Script takes ~5 minute to run on an M5 MackBook Pro
 # Any "PROBLEMS" showing in Positron resolve after source("track_PRs.R") is run
-# Script requires a Google account for authentication
+# Script requires access to the rowforwards Google account for authentication
 # Tracking spreadsheet is
 # https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA
 
