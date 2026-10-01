@@ -4,7 +4,7 @@ This repo contains scripts to identify R packages which generate a 'Lost braces'
 
 It is associated with <https://github.com/r-devel/r-dev-day/issues/110>.
 
-The [tracking spreadsheet](https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA) is updated daily at 6am UTC via a [GitHub Action](.github/workflows/update-googlesheet.yml) which runs [write_googlesheet.R](write_googlesheet.R).
+The [tracking spreadsheet](https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA) is updated at 6am UTC on Sundays via a [GitHub Action](.github/workflows/update-googlesheet.yml) which runs [write_googlesheet.R](write_googlesheet.R).
 
 ## Workflow for folks making PRs to fix lost braces NOTES
 
@@ -18,7 +18,8 @@ The [tracking spreadsheet](https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_u
 
 Note that the tracking spreadsheet is *read only*. Your contributions are programmatically added to the spreadsheet providing the PR is linked to as described avove.
 
-We also do not expect folks to run any of the R scripts themselves (except possibly [analyse_track_lost_braces.R](analyse_track_lost_braces.R) if they want to analyse this data in R), nor manually trigger the GitHub Action. 
+We also do not expect folks to run any of the R scripts themselves (except possibly [analyse_track_lost_braces.R](analyse_track_lost_braces.R) if they want to analyse this data in R). 
+The Update GoogleSheet GitHub Action can be manually triggered to incorporate the most up-to-date info from CRAN and GitHub.
 The contributor workflow only involves the tracking spreadsheet and <https://github.com/r-devel/r-dev-day/issues/110>.
 
 ## Repo setup
