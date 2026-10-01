@@ -1,5 +1,7 @@
-# Script takes ~1 minute to run on an M5 MackBook Pro
+# Script takes ~5 minute to run on an M5 MackBook Pro
 # Script requires access to the rowforwards Google account for authentication
+# The script runs weekly at 6:00 UTC on Sundays via a GitHub Action,
+# authenticated via a Google Service account
 # Any "PROBLEMS" showing in Positron resolve after source("track_lost_braces.R") is run
 # Tracking spreadsheet is
 # https://docs.google.com/spreadsheets/d/1qL5s2okfQmh_ufwh3MS6rJPzIlLmJzIN2g9u2loFzkA
@@ -11,21 +13,21 @@ updated_sheet <- track_lost_braces |>
   mutate(Output = stringr::str_trunc(Output, 49000)) |>
   mutate(
     URL = gs4_formula(ifelse(
-      URL == "NA",
+      is.na(URL) | URL == "NA" | URL == "",
       NA_character_,
       sprintf('=HYPERLINK("%s","%s")', URL, URL)
     ))
   ) |>
   mutate(
     BugReports = gs4_formula(ifelse(
-      BugReports == "NA",
+      is.na(BugReports) | BugReports == "NA" | BugReports == "",
       NA_character_,
       sprintf('=HYPERLINK("%s","%s")', BugReports, BugReports)
     ))
   ) |>
   mutate(
     PR_link = gs4_formula(ifelse(
-      PR_link == "NA",
+      is.na(PR_link) | PR_link == "NA" | PR_link == "",
       NA_character_,
       sprintf('=HYPERLINK("%s","%s")', PR_link, PR_link)
     ))
